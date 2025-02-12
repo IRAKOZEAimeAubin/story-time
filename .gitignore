@@ -3,3 +3,9 @@ node_modules
 
 # environment variables
 .env
+
+# migrations
+prisma/migrations
+
+# logs
+logs
