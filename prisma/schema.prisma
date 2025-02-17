@@ -14,13 +14,14 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  posts     Post[]
-  auth      Auth?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  email      String   @unique
+  name       String
+  posts      Post[]
+  savedPosts Post[]   @relation("SavedPosts")
+  auth       Auth?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Auth {
@@ -35,12 +36,16 @@ model Auth {
 model Post {
   id        String   @id @default(cuid())
   title     String
-  slug      String
+  slug      String   @unique()
   tags      String[]
   content   String?  @db.Text
   published Boolean  @default(false)
   authorId  String
   author    User     @relation(fields: [authorId], references: [id])
+  likes     Int      @default(0)
+  dislikes  Int      @default(0)
+  saves     Int      @default(0)
+  savedBy   User[]   @relation("SavedPosts")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
