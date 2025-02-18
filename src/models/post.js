@@ -28,8 +28,4 @@ export const PostSchema = z.object( {
         .min( 10, {
             message: "Content must be at least 10 characters long",
         } ),
-    published: z.boolean().optional().default( false ), // Optional, defaults to false
-    likes: z.number().int().nonnegative().optional().default( 0 ),
-    dislikes: z.number().int().nonnegative().optional().default( 0 ),
-    saves: z.number().int().nonnegative().optional().default( 0 )
 } );

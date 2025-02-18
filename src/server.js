@@ -6,6 +6,7 @@ import root from './routes/root.js';
 import health from './routes/health.js';
 import auth from './routes/auth.js';
 import post from './routes/post.js';
+import posts from './routes/posts.js';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './helpers/swagger.js';
 
@@ -27,5 +28,7 @@ app.use( '/api-docs', swaggerUi.serve, swaggerUi.setup( swaggerSpec ) );
 app.use( '/api/auth', auth );
 
 app.use( '/api/post', post );
+
+app.use( '/api/posts', posts);
 
 app.listen( port, () => console.log( info( `Server is running on port ${ port }...` ) ) );

@@ -8,6 +8,8 @@ import slugify from "slugify";
 // @route POST /api/post
 export async function createPost ( req, res, next ) {
     let post;
+    let message;
+
     try {
         logger.debug( 'Called createPost()...' );
 
@@ -24,9 +26,19 @@ export async function createPost ( req, res, next ) {
         } );
 
         if ( existingPost ) {
-            const message = `Post with title ${ existingPost.title } already exists`;
+            message = `Post with title ${ existingPost.title } already exists`;
             logger.error( message );
             return res.status( 409 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        const userId = req.user?.id;
+        if ( !userId ) {
+            message = 'Unauthorized: User must be logged in to fetch posts';
+            logger.error( message );
+            return res.status( 401 ).json( {
                 success: false,
                 message
             } );
@@ -39,7 +51,7 @@ export async function createPost ( req, res, next ) {
                     content: validatedData.content,
                     tags: validatedData.tags,
                     slug: slug,
-                    authorId: req.user.id
+                    authorId: userId
                 },
                 select: {
                     id: true,
@@ -64,6 +76,7 @@ export async function createPost ( req, res, next ) {
 
         return res.status( 201 ).json( {
             success: true,
+            message: 'Post created successfully',
             data: {
                 post
             }
@@ -73,19 +86,81 @@ export async function createPost ( req, res, next ) {
         logger.error( 'Error calling createPost()...' );
 
         if ( error instanceof z.ZodError ) {
+            message = 'Validation failed';
+            logger.error( message );
             return res.status( 422 ).json( {
                 success: false,
-                message: 'Validation failed',
+                message,
                 errors: error.errors
             } );
         }
 
         if ( error.code === 'P2002' ) {
+            message = 'Post with this title already exists';
+            logger.error( message );
             return res.status( 409 ).json( {
                 success: false,
-                message: 'Post with this title already exists'
+                message
             } );
         }
+
+        return next( error );
+    }
+}
+
+// @desc Get user's post
+// @route GET /api/posts/user
+export async function fetchUserPosts ( req, res, next ) {
+    let message;
+    let posts;
+
+    try {
+        logger.debug( 'Called createPost()...' );
+
+        const userId = req.user?.id;
+        if ( !userId ) {
+            message = 'Unauthorized: User must be logged in to fetch posts';
+            logger.error( message );
+            return res.status( 401 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        try {
+            posts = await prisma.post.findMany( {
+                where: {
+                    authorId: userId
+                },
+                select: {
+                    id: true,
+                    title: true,
+                    slug: true,
+                    content: true,
+                    tags: true,
+                    published: true,
+                    likes: true,
+                    dislikes: true,
+                    saves: true,
+                    createdAt: true,
+                    updatedAt: true,
+                }
+            } );
+        } catch ( error ) {
+            logger.error( 'Error during fetching posts:', error );
+            throw error;
+        }
+
+        return res.status( 200 ).json( {
+            success: true,
+            message: 'Posts fetched successfully',
+            data: {
+                posts,
+            }
+        } );
+
+    } catch ( error ) {
+        logger.error( 'Error calling fetchUserPosts()...' );
 
         return next( error );
     }

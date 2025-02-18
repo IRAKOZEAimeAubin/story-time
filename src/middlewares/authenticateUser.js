@@ -1,13 +1,18 @@
 import jwt from 'jsonwebtoken';
 import prisma from '../prisma.js';
+import { logger } from '../helpers/logger.js';
 
 export async function authenticateUser ( req, res, next ) {
+    let message;
+
     try {
         const authHeader = req.headers.authorization;
         if ( !authHeader?.startsWith( 'Bearer ' ) ) {
+            message = 'Authentication required';
+            logger.error( message );
             return res.status( 401 ).json( {
                 success: false,
-                message: 'Authentication required'
+                message
             } );
         }
 
@@ -20,9 +25,11 @@ export async function authenticateUser ( req, res, next ) {
         } );
 
         if ( !user ) {
+            message = 'Invalid token';
+            logger.error( message );
             return res.status( 401 ).json( {
                 success: false,
-                message: 'Invalid token'
+                message
             } );
         }
 
@@ -30,16 +37,20 @@ export async function authenticateUser ( req, res, next ) {
         next();
     } catch ( error ) {
         if ( error instanceof jwt.JsonWebTokenError ) {
+            message = 'Invalid token';
+            logger.error( message );
             return res.status( 401 ).json( {
                 success: false,
-                message: 'Invalid token'
+                message
             } );
         }
 
         if ( error instanceof jwt.TokenExpiredError ) {
+            message = 'Token expired';
+            logger.error( message );
             return res.status( 401 ).json( {
                 success: false,
-                message: 'Token expired'
+                message
             } );
         }
 
