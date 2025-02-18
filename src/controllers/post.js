@@ -115,7 +115,7 @@ export async function fetchUserPosts ( req, res, next ) {
     let posts;
 
     try {
-        logger.debug( 'Called createPost()...' );
+        logger.debug( 'Called fetchUserPosts()...' );
 
         const userId = req.user?.id;
         if ( !userId ) {
@@ -161,6 +161,64 @@ export async function fetchUserPosts ( req, res, next ) {
 
     } catch ( error ) {
         logger.error( 'Error calling fetchUserPosts()...' );
+
+        return next( error );
+    }
+}
+
+// @desc Get user's post
+// @route GET /api/posts
+export async function fetchPublishedPosts ( req, res, next ) {
+    let message;
+    let posts;
+
+    try {
+        logger.debug( 'Called fetchPublishedPosts()...' );
+
+        const userId = req.user?.id;
+        if ( !userId ) {
+            message = 'Unauthorized: User must be logged in to fetch posts';
+            logger.error( message );
+            return res.status( 401 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        try {
+            posts = await prisma.post.findMany( {
+                where: {
+                    published: true
+                },
+                select: {
+                    id: true,
+                    title: true,
+                    slug: true,
+                    content: true,
+                    tags: true,
+                    published: true,
+                    likes: true,
+                    dislikes: true,
+                    saves: true,
+                    createdAt: true,
+                    updatedAt: true,
+                }
+            } );
+        } catch ( error ) {
+            logger.error( 'Error during fetching posts:', error );
+            throw error;
+        }
+
+        return res.status( 200 ).json( {
+            success: true,
+            message: 'Posts fetched successfully',
+            data: {
+                posts,
+            }
+        } );
+
+    } catch ( error ) {
+        logger.error( 'Error calling fetchPublishedPosts()...' );
 
         return next( error );
     }
