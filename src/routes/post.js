@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateUser } from '../middlewares/authenticateUser.js';
-import { createPost, publishPost } from '../controllers/post.js';
+import { createPost, publishPost, togglePostLike } from '../controllers/post.js';
 
 const router = express.Router();
 
@@ -103,5 +103,7 @@ const router = express.Router();
 router.post( '/', authenticateUser, createPost );
 
 router.patch( '/:id/publish', authenticateUser, publishPost );
+
+router.post( '/:id/like', authenticateUser, togglePostLike );
 
 export default router;

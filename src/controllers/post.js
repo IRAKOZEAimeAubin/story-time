@@ -139,9 +139,40 @@ export async function fetchUserPosts ( req, res, next ) {
                     content: true,
                     tags: true,
                     published: true,
-                    likes: true,
-                    dislikes: true,
-                    saves: true,
+                    author: {
+                        select: {
+                            id: true,
+                            name: true
+                        }
+                    },
+                    likes: {
+                        select: {
+                            user: {
+                                select: {
+                                    id: true,
+                                    name: true
+                                }
+                            },
+                            createdAt: true,
+                        }
+                    },
+                    dislikes: {
+                        select: {
+                            user: {
+                                select: {
+                                    id: true,
+                                    name: true
+                                }
+                            },
+                            createdAt: true,
+                        }
+                    },
+                    _count: {
+                        select: {
+                            likes: true,
+                            dislikes: true
+                        }
+                    },
                     createdAt: true,
                     updatedAt: true,
                 }
@@ -197,9 +228,40 @@ export async function fetchPublishedPosts ( req, res, next ) {
                     content: true,
                     tags: true,
                     published: true,
-                    likes: true,
-                    dislikes: true,
-                    saves: true,
+                    author: {
+                        select: {
+                            id: true,
+                            name: true
+                        }
+                    },
+                    likes: {
+                        select: {
+                            user: {
+                                select: {
+                                    id: true,
+                                    name: true
+                                }
+                            },
+                            createdAt: true,
+                        }
+                    },
+                    dislikes: {
+                        select: {
+                            user: {
+                                select: {
+                                    id: true,
+                                    name: true
+                                }
+                            },
+                            createdAt: true,
+                        }
+                    },
+                    _count: {
+                        select: {
+                            likes: true,
+                            dislikes: true
+                        }
+                    },
                     createdAt: true,
                     updatedAt: true,
                 }
@@ -298,6 +360,129 @@ export async function publishPost ( req, res, next ) {
                 errors: error.errors,
             } );
         }
+
+        if ( error.code === 'P2025' ) {
+            return res.status( 404 ).json( {
+                success: false,
+                message: 'Not Found: Post not found',
+            } );
+        }
+
+        return next( error );
+    }
+}
+
+// @desc Publish or Unpublish a post
+// @route POST /api/post/:id/like
+export async function togglePostLike ( req, res, next ) {
+    let message;
+    let likedPost;
+
+    try {
+        logger.debug( 'Called likePost()...' );
+
+        const postId = req.params.id;
+        const post = await prisma.post.findUnique( {
+            where: { id: postId },
+            select: { published: true }
+        } );
+        if ( !post ) {
+            message = `Not Found: Post with id ${ postId } not found`;
+            logger.error( message );
+            return res.status( 404 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        const userId = req.user?.id;
+        if ( !userId ) {
+            message = 'Unauthorized: User must be logged in to like a post';
+            logger.error( message );
+            return res.status( 401 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        if ( !post.published ) {
+            message = 'Forbidden: User can only like a published post';
+            logger.error( message );
+            return res.status( 403 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        const existingLike = await prisma.postLike.findUnique( {
+            where: {
+                postId_userId: {
+                    postId,
+                    userId
+                }
+            }
+        } );
+
+        const existingDislike = await prisma.postDislike.findUnique( {
+            where: {
+                postId_userId: {
+                    postId,
+                    userId
+                }
+            }
+        } );
+
+        try {
+            likedPost = await prisma.$transaction( async ( tx ) => {
+                if ( existingLike ) {
+                    await tx.postLike.delete( {
+                        where: {
+                            postId_userId: {
+                                postId,
+                                userId
+                            }
+                        }
+                    } );
+
+                    return {
+                        action: 'removed like',
+                        like: null
+                    };
+                } else {
+                    const newLike = await tx.postLike.create( {
+                        data: {
+                            postId,
+                            userId
+                        }
+                    } );
+
+                    return {
+                        action: 'added like',
+                        like: newLike
+                    };
+                }
+            } );
+
+            const likeCount = await prisma.postLike.count( {
+                where: { postId }
+            } );
+
+            res.status( 200 ).json( {
+                success: true,
+                message: `User ${ likedPost.action }`,
+                data: {
+                    postId,
+                    liked: likedPost.action === 'added like',
+                    likeCount
+                }
+            } );
+
+        } catch ( error ) {
+            logger.error( 'Error during post liking:', error );
+            throw error;
+        }
+    } catch ( error ) {
+        logger.error( 'Error calling publishPost()...' );
 
         if ( error.code === 'P2025' ) {
             return res.status( 404 ).json( {
