@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateUser } from '../middlewares/authenticateUser.js';
-import { createPost } from '../controllers/post.js';
+import { createPost, publishPost } from '../controllers/post.js';
 
 const router = express.Router();
 
@@ -101,5 +101,7 @@ const router = express.Router();
  *         description: Validation error - Invalid input data
  */
 router.post( '/', authenticateUser, createPost );
+
+router.patch( '/:id/publish', authenticateUser, publishPost );
 
 export default router;

@@ -1,5 +1,5 @@
 import prisma from "../prisma.js";
-import { PostSchema as ps } from "../models/post.js";
+import { PostSchema as ps, PublishPostSchema as pps } from "../models/post.js";
 import { z } from 'zod';
 import { logger } from "../helpers/logger.js";
 import slugify from "slugify";
@@ -219,6 +219,92 @@ export async function fetchPublishedPosts ( req, res, next ) {
 
     } catch ( error ) {
         logger.error( 'Error calling fetchPublishedPosts()...' );
+
+        return next( error );
+    }
+}
+
+// @desc Publish or Unpublish a post
+// @route PATCH /api/post/:id/publish
+export async function publishPost ( req, res, next ) {
+    let message;
+    let updatedPost;
+
+    try {
+        logger.debug( 'Called publishPost()...' );
+
+        const { published } = pps.parse( req.body );
+
+        const postId = req.params.id;
+        const post = await prisma.post.findUnique( {
+            where: { id: postId },
+            select: { authorId: true }
+        } );
+        if ( !post ) {
+            message = `Not Found: Post with id ${ postId } not found`;
+            logger.error( message );
+            return res.status( 404 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        const userId = req.user?.id;
+        if ( !userId ) {
+            message = 'Unauthorized: User must be logged in to publish/unpublish post';
+            logger.error( message );
+            return res.status( 401 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        if ( post.authorId !== userId ) {
+            message = 'Forbidden: You do not have permission to publish/unpublish this post';
+            logger.error( message );
+            return res.status( 403 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        try {
+            updatedPost = await prisma.post.update( {
+                where: { id: postId },
+                data: {
+                    published
+                }
+            } );
+        } catch ( error ) {
+            logger.error( 'Error during post publishing/unpublishing:', error );
+            throw error;
+        }
+
+        return res.status( 200 ).json( {
+            success: true,
+            message: published ? 'Post published successfully' : 'Post unpublished successfully',
+            data: {
+                post: updatedPost
+            },
+        } );
+
+    } catch ( error ) {
+        logger.error( 'Error calling publishPost()...' );
+
+        if ( error instanceof z.ZodError ) {
+            return res.status( 422 ).json( {
+                success: false,
+                message: 'Unprocessable Entity: Invalid data',
+                errors: error.errors,
+            } );
+        }
+
+        if ( error.code === 'P2025' ) {
+            return res.status( 404 ).json( {
+                success: false,
+                message: 'Not Found: Post not found',
+            } );
+        }
 
         return next( error );
     }

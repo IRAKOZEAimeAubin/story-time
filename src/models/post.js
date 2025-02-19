@@ -29,3 +29,10 @@ export const PostSchema = z.object( {
             message: "Content must be at least 10 characters long",
         } ),
 } );
+
+export const PublishPostSchema = z.object( {
+    published: z.boolean( {
+        required_error: 'Published field is required',
+        invalid_type_error: 'Published must be a boolean',
+    } ),
+} );
