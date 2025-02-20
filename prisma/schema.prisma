@@ -14,13 +14,16 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  posts     Post[]
-  auth      Auth?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String        @id @default(cuid())
+  email      String        @unique
+  name       String
+  posts      Post[]
+  savedPosts PostSave[]
+  likes      PostLike[]
+  dislikes   PostDislike[]
+  auth       Auth?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
 }
 
 model Auth {
@@ -33,16 +36,61 @@ model Auth {
 }
 
 model Post {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   title     String
-  slug      String
+  slug      String        @unique()
   tags      String[]
-  content   String?  @db.Text
-  published Boolean  @default(false)
+  content   String?       @db.Text
+  published Boolean       @default(false)
   authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  likes     PostLike[]
+  dislikes  PostDislike[]
+  saves     PostSave[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([authorId])
+}
+
+model PostLike {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([authorId])
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+}
+
+model PostDislike {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+}
+
+model PostSave {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
 }

@@ -4,6 +4,13 @@ const router = express.Router();
 
 /**
  * @swagger
+ * tags:
+ *   name: Health
+ *   description: API for checking the health of the endpoints
+ */
+
+/**
+ * @swagger
  * /health:
  *  get:
  *     summary: Check server health
