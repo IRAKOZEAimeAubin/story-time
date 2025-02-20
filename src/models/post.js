@@ -39,6 +39,7 @@ export const PublishPostSchema = z.object( {
 
 export const UpdatePostSchema = z.object( {
     title: z.string().min( 5 ).max( 100 ).optional(),
+    slug: z.string().optional(),
     content: z.string().min( 10 ).optional(),
     tags: z.array( z.string() ).min( 1 ).max( 5 ).optional(),
     published: z.boolean().optional(),

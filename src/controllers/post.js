@@ -840,6 +840,8 @@ export async function updatePost ( req, res, next ) {
                     message
                 } );
             }
+
+            validatedData.slug = slug;
         }
 
         try {
