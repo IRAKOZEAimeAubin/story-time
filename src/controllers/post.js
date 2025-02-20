@@ -447,7 +447,6 @@ export async function togglePostLike ( req, res, next ) {
 
                     return {
                         action: 'removed like',
-                        like: null
                     };
                 } else {
                     if ( existingDislike ) {
@@ -495,6 +494,140 @@ export async function togglePostLike ( req, res, next ) {
 
     } catch ( error ) {
         logger.error( 'Error calling togglePostLike()...' );
+
+        if ( error.code === 'P2025' ) {
+            return res.status( 404 ).json( {
+                success: false,
+                message: 'Not Found: Post not found',
+            } );
+        }
+
+        return next( error );
+    }
+}
+
+// @desc Add or remove a like to a post
+// @route POST /api/post/:id/dislike
+export async function togglePostDislike ( req, res, next ) {
+    let message;
+    let dislikedPost;
+
+    try {
+        logger.debug( 'Called togglePostDislike()...' );
+
+        const postId = req.params.id;
+        const post = await prisma.post.findUnique( {
+            where: { id: postId },
+            select: { published: true }
+        } );
+        if ( !post ) {
+            message = `Not Found: Post with id ${ postId } not found`;
+            logger.error( message );
+            return res.status( 404 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        const userId = req.user?.id;
+        if ( !userId ) {
+            message = 'Unauthorized: User must be logged in to dislike a post';
+            logger.error( message );
+            return res.status( 401 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        if ( !post.published ) {
+            message = 'Forbidden: User can only dislike a published post';
+            logger.error( message );
+            return res.status( 403 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        const [ existingLike, existingDislike ] = await Promise.all( [
+            prisma.postLike.findUnique( {
+                where: {
+                    postId_userId: {
+                        postId,
+                        userId
+                    }
+                }
+            } ),
+            prisma.postDislike.findUnique( {
+                where: {
+                    postId_userId: {
+                        postId,
+                        userId
+                    }
+                }
+            } )
+        ] );
+
+        try {
+            dislikedPost = await prisma.$transaction( async ( tx ) => {
+                if ( existingDislike ) {
+                    await tx.postDislike.delete( {
+                        where: {
+                            postId_userId: {
+                                postId,
+                                userId
+                            }
+                        }
+                    } );
+
+                    return {
+                        action: 'removed dislike',
+                    };
+                } else {
+                    if ( existingLike ) {
+                        await tx.postLike.delete( {
+                            where: {
+                                postId_userId: { postId, userId }
+                            }
+                        } );
+                    }
+
+                    await tx.postDislike.create( {
+                        data: {
+                            postId,
+                            userId
+                        }
+                    } );
+
+                    const [ likes, dislikes ] = await Promise.all( [
+                        tx.postLike.count( { where: { postId } } ),
+                        tx.postDislike.count( { where: { postId } } )
+                    ] );
+
+                    return {
+                        action: 'added dislike',
+                        counts: { likes, dislikes }
+                    };
+                }
+            } );
+
+        } catch ( error ) {
+            logger.error( 'Error during post disliking:', error );
+            throw error;
+        }
+
+        res.status( 200 ).json( {
+            success: true,
+            message: `User ${ dislikedPost.action }`,
+            data: {
+                postId,
+                disliked: dislikedPost.action === 'added dislike',
+                likeCount: dislikedPost.counts.likes,
+                dislikeCount: dislikedPost.counts.dislikes
+            }
+        } );
+
+    } catch ( error ) {
+        logger.error( 'Error calling togglePostDislike()...' );
 
         if ( error.code === 'P2025' ) {
             return res.status( 404 ).json( {
