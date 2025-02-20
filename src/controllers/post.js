@@ -372,14 +372,14 @@ export async function publishPost ( req, res, next ) {
     }
 }
 
-// @desc Publish or Unpublish a post
+// @desc Add or remove a like to a post
 // @route POST /api/post/:id/like
 export async function togglePostLike ( req, res, next ) {
     let message;
     let likedPost;
 
     try {
-        logger.debug( 'Called likePost()...' );
+        logger.debug( 'Called togglePostLike()...' );
 
         const postId = req.params.id;
         const post = await prisma.post.findUnique( {
@@ -414,23 +414,24 @@ export async function togglePostLike ( req, res, next ) {
             } );
         }
 
-        const existingLike = await prisma.postLike.findUnique( {
-            where: {
-                postId_userId: {
-                    postId,
-                    userId
+        const [ existingLike, existingDislike ] = await Promise.all( [
+            prisma.postLike.findUnique( {
+                where: {
+                    postId_userId: {
+                        postId,
+                        userId
+                    }
                 }
-            }
-        } );
-
-        const existingDislike = await prisma.postDislike.findUnique( {
-            where: {
-                postId_userId: {
-                    postId,
-                    userId
+            } ),
+            prisma.postDislike.findUnique( {
+                where: {
+                    postId_userId: {
+                        postId,
+                        userId
+                    }
                 }
-            }
-        } );
+            } )
+        ] );
 
         try {
             likedPost = await prisma.$transaction( async ( tx ) => {
@@ -449,31 +450,30 @@ export async function togglePostLike ( req, res, next ) {
                         like: null
                     };
                 } else {
-                    const newLike = await tx.postLike.create( {
+                    if ( existingDislike ) {
+                        await tx.postDislike.delete( {
+                            where: {
+                                postId_userId: { postId, userId }
+                            }
+                        } );
+                    }
+
+                    await tx.postLike.create( {
                         data: {
                             postId,
                             userId
                         }
                     } );
 
+                    const [ likes, dislikes ] = await Promise.all( [
+                        tx.postLike.count( { where: { postId } } ),
+                        tx.postDislike.count( { where: { postId } } )
+                    ] );
+
                     return {
                         action: 'added like',
-                        like: newLike
+                        counts: { likes, dislikes }
                     };
-                }
-            } );
-
-            const likeCount = await prisma.postLike.count( {
-                where: { postId }
-            } );
-
-            res.status( 200 ).json( {
-                success: true,
-                message: `User ${ likedPost.action }`,
-                data: {
-                    postId,
-                    liked: likedPost.action === 'added like',
-                    likeCount
                 }
             } );
 
@@ -481,8 +481,20 @@ export async function togglePostLike ( req, res, next ) {
             logger.error( 'Error during post liking:', error );
             throw error;
         }
+
+        res.status( 200 ).json( {
+            success: true,
+            message: `User ${ likedPost.action }`,
+            data: {
+                postId,
+                liked: likedPost.action === 'added like',
+                likeCount: likedPost.counts.likes,
+                dislikeCount: likedPost.counts.dislikes
+            }
+        } );
+
     } catch ( error ) {
-        logger.error( 'Error calling publishPost()...' );
+        logger.error( 'Error calling togglePostLike()...' );
 
         if ( error.code === 'P2025' ) {
             return res.status( 404 ).json( {
