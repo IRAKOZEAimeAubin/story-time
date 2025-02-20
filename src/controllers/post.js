@@ -1,5 +1,5 @@
 import prisma from "../prisma.js";
-import { PostSchema as ps, PublishPostSchema as pps } from "../models/post.js";
+import { PostSchema as ps, PublishPostSchema as pps, UpdatePostSchema as ups } from "../models/post.js";
 import { z } from 'zod';
 import { logger } from "../helpers/logger.js";
 import slugify from "slugify";
@@ -769,6 +769,121 @@ export async function togglePostSave ( req, res, next ) {
             return res.status( 404 ).json( {
                 success: false,
                 message: 'Not Found: Post not found',
+            } );
+        }
+
+        return next( error );
+    }
+}
+
+// @desc Update post
+// @route PATCH /api/post/:id
+export async function updatePost ( req, res, next ) {
+    let updatedPost;
+    let message;
+
+    try {
+        logger.debug( 'Called createPost()...' );
+
+        const userId = req.user?.id;
+        if ( !userId ) {
+            message = 'Unauthorized: User must be logged in to fetch posts';
+            logger.error( message );
+            return res.status( 401 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        const postId = req.params.id;
+        const post = await prisma.post.findUnique( {
+            where: { id: postId },
+            select: { authorId: true },
+        } );
+
+        if ( !post ) {
+            message = 'Not found: Post not found';
+            return res.status( 404 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        const validatedData = ups.parse( req.body );
+
+        if ( validatedData.title ) {
+            const slug = slugify( validatedData.title, {
+                lower: true,
+                strict: true,
+                trim: true
+            } );
+
+            const existingPost = await prisma.post.findUnique( {
+                where: { slug }
+            } );
+
+            if ( existingPost ) {
+                message = `Conflict: Post with title ${ existingPost.title } already exists`;
+                logger.error( message );
+                return res.status( 409 ).json( {
+                    success: false,
+                    message
+                } );
+            }
+        }
+
+        try {
+            updatedPost = await prisma.post.update( {
+                where: { id: postId },
+                data: validatedData,
+                select: {
+                    id: true,
+                    title: true,
+                    slug: true,
+                    content: true,
+                    tags: true,
+                    published: true,
+                    updatedAt: true,
+                    author: {
+                        select: {
+                            id: true,
+                            name: true
+                        }
+                    }
+                }
+            } );
+        } catch ( error ) {
+            logger.error( 'Error during post update:', error );
+            throw error;
+        }
+
+        return res.status( 200 ).json( {
+            success: true,
+            message: 'Post updated successfully',
+            data: {
+                updatedPost
+            }
+        } );
+
+    } catch ( error ) {
+        logger.error( 'Error calling updatePost()...' );
+
+        if ( error instanceof z.ZodError ) {
+            message = 'Unprocessable Entity: Invalid data';
+            logger.error( message );
+            return res.status( 422 ).json( {
+                success: false,
+                message,
+                errors: error.errors
+            } );
+        }
+
+        if ( error.code === 'P2002' ) {
+            message = 'Conflict: Post with this title already exists';
+            logger.error( message );
+            return res.status( 409 ).json( {
+                success: false,
+                message
             } );
         }
 

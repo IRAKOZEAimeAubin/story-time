@@ -36,3 +36,10 @@ export const PublishPostSchema = z.object( {
         invalid_type_error: 'Published must be a boolean',
     } ),
 } );
+
+export const UpdatePostSchema = z.object( {
+    title: z.string().min( 5 ).max( 100 ).optional(),
+    content: z.string().min( 10 ).optional(),
+    tags: z.array( z.string() ).min( 1 ).max( 5 ).optional(),
+    published: z.boolean().optional(),
+} );

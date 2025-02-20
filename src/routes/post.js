@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateUser } from '../middlewares/authenticateUser.js';
-import { createPost, publishPost, togglePostDislike, togglePostLike, togglePostSave } from '../controllers/post.js';
+import { createPost, publishPost, togglePostDislike, togglePostLike, togglePostSave, updatePost } from '../controllers/post.js';
 
 const router = express.Router();
 
@@ -326,5 +326,56 @@ router.post( '/:id/dislike', authenticateUser, togglePostDislike );
  *         description: Post not found
  */
 router.post( '/:id/save', authenticateUser, togglePostSave );
+
+/**
+ * @swagger
+ * /api/post/{id}:
+ *   patch:
+ *     summary: Update a post
+ *     description: Update the title, content, tags, or publishing status of a post. Only the author of the post can perform this action.
+ *     tags: [Posts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the post to update.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 example: Updated Title
+ *               content:
+ *                 type: string
+ *                 example: Updated content...
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["updated", "tags"]
+ *               published:
+ *                 type: boolean
+ *                 example: true
+ *     responses:
+ *       200:
+ *         description: Post updated successfully
+ *       401:
+ *         description: Unauthorized - User must be logged in
+ *       403:
+ *         description: Forbidden - User is not the author of the post
+ *       404:
+ *         description: Post not found
+ *       422:
+ *         description: Validation error - Invalid input data
+*/
+router.patch( '/:id', authenticateUser, updatePost );
 
 export default router;
