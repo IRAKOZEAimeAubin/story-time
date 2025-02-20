@@ -6,6 +6,13 @@ const router = express.Router();
 
 /**
  * @swagger
+ * tags:
+ *   name: Posts
+ *   description: API for managing blog posts
+ */
+
+/**
+ * @swagger
  * /api/post:
  *   post:
  *     summary: Create a new post
@@ -102,12 +109,222 @@ const router = express.Router();
  */
 router.post( '/', authenticateUser, createPost );
 
+/**
+ * @swagger
+ * /api/post/{id}/publish:
+ *   patch:
+ *     summary: Publish or unpublish a post
+ *     description: Publish or unpublish a post. Only the author of the post can perform this action.
+ *     tags: [Posts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the post to publish/unpublish.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - published
+ *             properties:
+ *               published:
+ *                 type: boolean
+ *                 example: true
+ *                 description: Whether the post should be published or unpublished.
+ *     responses:
+ *       200:
+ *         description: Post published/unpublished successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Post published successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     post:
+ *                       $ref: '#/components/schemas/Post'
+ *       401:
+ *         description: Unauthorized - User must be logged in
+ *       403:
+ *         description: Forbidden - User is not the author of the post
+ *       404:
+ *         description: Post not found
+ *       422:
+ *         description: Validation error - Published field must be a boolean
+ */
 router.patch( '/:id/publish', authenticateUser, publishPost );
 
+/**
+ * @swagger
+ * /api/post/{id}/like:
+ *   post:
+ *     summary: Like or unlike a post
+ *     description: Like or unlike a post. Only published posts can be liked.
+ *     tags: [Posts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the post to like/unlike.
+ *     responses:
+ *       200:
+ *         description: Post liked/unliked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: User added like
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     postId:
+ *                       type: string
+ *                       example: cl1234567890abcdef
+ *                     liked:
+ *                       type: boolean
+ *                       example: true
+ *                     likeCount:
+ *                       type: integer
+ *                       example: 1
+ *                     dislikeCount:
+ *                       type: integer
+ *                       example: 0
+ *       401:
+ *         description: Unauthorized - User must be logged in
+ *       403:
+ *         description: Forbidden - Post is not published
+ *       404:
+ *         description: Post not found
+ */
 router.post( '/:id/like', authenticateUser, togglePostLike );
 
+/**
+ * @swagger
+ * /api/post/{id}/dislike:
+ *   post:
+ *     summary: Dislike or undislike a post
+ *     description: Dislike or undislike a post. Only published posts can be disliked.
+ *     tags: [Posts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the post to dislike/undislike.
+ *     responses:
+ *       200:
+ *         description: Post disliked/undisliked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: User added dislike
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     postId:
+ *                       type: string
+ *                       example: cl1234567890abcdef
+ *                     disliked:
+ *                       type: boolean
+ *                       example: true
+ *                     likeCount:
+ *                       type: integer
+ *                       example: 0
+ *                     dislikeCount:
+ *                       type: integer
+ *                       example: 1
+ *       401:
+ *         description: Unauthorized - User must be logged in
+ *       403:
+ *         description: Forbidden - Post is not published
+ *       404:
+ *         description: Post not found
+ */
 router.post( '/:id/dislike', authenticateUser, togglePostDislike );
 
+/**
+ * @swagger
+ * /api/post/{id}/save:
+ *   post:
+ *     summary: Save or unsave a post
+ *     description: Save or unsave a post. Only published posts can be saved.
+ *     tags: [Posts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the post to save/unsave.
+ *     responses:
+ *       200:
+ *         description: Post saved/unsaved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: User saved post
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     postId:
+ *                       type: string
+ *                       example: cl1234567890abcdef
+ *                     saved:
+ *                       type: boolean
+ *                       example: true
+ *                     saveCount:
+ *                       type: integer
+ *                       example: 1
+ *       401:
+ *         description: Unauthorized - User must be logged in
+ *       403:
+ *         description: Forbidden - Post is not published
+ *       404:
+ *         description: Post not found
+ */
 router.post( '/:id/save', authenticateUser, togglePostSave );
 
 export default router;

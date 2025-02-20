@@ -26,7 +26,7 @@ export async function createPost ( req, res, next ) {
         } );
 
         if ( existingPost ) {
-            message = `Post with title ${ existingPost.title } already exists`;
+            message = `Conflict: Post with title ${ existingPost.title } already exists`;
             logger.error( message );
             return res.status( 409 ).json( {
                 success: false,
@@ -86,7 +86,7 @@ export async function createPost ( req, res, next ) {
         logger.error( 'Error calling createPost()...' );
 
         if ( error instanceof z.ZodError ) {
-            message = 'Validation failed';
+            message = 'Unprocessable Entity: Invalid data';
             logger.error( message );
             return res.status( 422 ).json( {
                 success: false,
@@ -96,7 +96,7 @@ export async function createPost ( req, res, next ) {
         }
 
         if ( error.code === 'P2002' ) {
-            message = 'Post with this title already exists';
+            message = 'Conflict: Post with this title already exists';
             logger.error( message );
             return res.status( 409 ).json( {
                 success: false,

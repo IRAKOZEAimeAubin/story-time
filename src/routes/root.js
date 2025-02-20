@@ -4,6 +4,13 @@ const router = express.Router();
 
 /**
  * @swagger
+ * tags:
+ *   name: Root
+ *   description: API for getting information about the application
+ */
+
+/**
+ * @swagger
  * /:
  *   get:
  *     summary: Get API information
