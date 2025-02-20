@@ -783,11 +783,11 @@ export async function updatePost ( req, res, next ) {
     let message;
 
     try {
-        logger.debug( 'Called createPost()...' );
+        logger.debug( 'Called updatePost()...' );
 
         const userId = req.user?.id;
         if ( !userId ) {
-            message = 'Unauthorized: User must be logged in to fetch posts';
+            message = 'Unauthorized: User must be logged in to update posts';
             logger.error( message );
             return res.status( 401 ).json( {
                 success: false,
@@ -803,7 +803,17 @@ export async function updatePost ( req, res, next ) {
 
         if ( !post ) {
             message = 'Not found: Post not found';
+            logger.error( message );
             return res.status( 404 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        if ( post.authorId !== userId ) {
+            message = 'Forbidden: You do not have permission to update this post';
+            logger.error( message );
+            return res.status( 403 ).json( {
                 success: false,
                 message
             } );
@@ -884,6 +894,79 @@ export async function updatePost ( req, res, next ) {
             return res.status( 409 ).json( {
                 success: false,
                 message
+            } );
+        }
+
+        return next( error );
+    }
+}
+
+// @desc Update post
+// @route DELETE /api/post/:id
+export async function deletePost ( req, res, next ) {
+    let message;
+    let deletedPost;
+
+    try {
+        logger.debug( 'Called deletePost()...' );
+
+        const userId = req.user?.id;
+        if ( !userId ) {
+            message = 'Unauthorized: User must be logged in to delete posts';
+            logger.error( message );
+            return res.status( 401 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        const postId = req.params.id;
+        const post = await prisma.post.findUnique( {
+            where: { id: postId },
+            select: { authorId: true },
+        } );
+
+        if ( !post ) {
+            message = 'Not found: Post not found';
+            logger.error( message );
+            return res.status( 404 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        if ( post.authorId !== userId ) {
+            message = 'Forbidden: You do not have permission to delete this post';
+            logger.error( message );
+            return res.status( 403 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        try {
+            deletedPost = await prisma.post.delete( {
+                where: { id: postId },
+            } );
+        } catch ( error ) {
+            logger.error( 'Error during post update:', error );
+            throw error;
+        }
+
+        return res.status( 200 ).json( {
+            success: true,
+            message: 'Post deleted successfully',
+            data: {
+                deletedPost
+            }
+        } );
+    } catch ( error ) {
+        logger.error( 'Error calling deletePost()...', error );
+
+        if ( error.code === 'P2025' ) {
+            return res.status( 404 ).json( {
+                success: false,
+                message: 'Not Found: Post not found',
             } );
         }
 

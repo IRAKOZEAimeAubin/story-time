@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateUser } from '../middlewares/authenticateUser.js';
-import { createPost, publishPost, togglePostDislike, togglePostLike, togglePostSave, updatePost } from '../controllers/post.js';
+import { createPost, deletePost, publishPost, togglePostDislike, togglePostLike, togglePostSave, updatePost } from '../controllers/post.js';
 
 const router = express.Router();
 
@@ -377,5 +377,33 @@ router.post( '/:id/save', authenticateUser, togglePostSave );
  *         description: Validation error - Invalid input data
 */
 router.patch( '/:id', authenticateUser, updatePost );
+
+/**
+ * @swagger
+ * /api/post/{id}:
+ *   delete:
+ *     summary: Delete a post
+ *     description: Delete a post. Only the author of the post can perform this action.
+ *     tags: [Posts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the post to delete.
+ *     responses:
+ *       200:
+ *         description: Post deleted successfully
+ *       401:
+ *         description: Unauthorized - User must be logged in
+ *       403:
+ *         description: Forbidden - User is not the author of the post
+ *       404:
+ *         description: Post not found
+ */
+router.delete( '/:id', authenticateUser, deletePost );
 
 export default router;

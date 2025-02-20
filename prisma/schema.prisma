@@ -43,7 +43,7 @@ model Post {
   content   String?       @db.Text
   published Boolean       @default(false)
   authorId  String
-  author    User          @relation(fields: [authorId], references: [id])
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
   likes     PostLike[]
   dislikes  PostDislike[]
   saves     PostSave[]
@@ -56,9 +56,9 @@ model Post {
 model PostLike {
   id        String   @id @default(cuid())
   postId    String
-  post      Post     @relation(fields: [postId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -70,9 +70,9 @@ model PostLike {
 model PostDislike {
   id        String   @id @default(cuid())
   postId    String
-  post      Post     @relation(fields: [postId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -82,11 +82,13 @@ model PostDislike {
 }
 
 model PostSave {
-  id     String @id @default(cuid())
-  postId String
-  post   Post   @relation(fields: [postId], references: [id])
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([postId, userId])
   @@index([postId])
