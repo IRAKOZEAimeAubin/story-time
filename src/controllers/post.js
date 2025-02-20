@@ -167,10 +167,21 @@ export async function fetchUserPosts ( req, res, next ) {
                             createdAt: true,
                         }
                     },
+                    saves: {
+                        select: {
+                            user: {
+                                select: {
+                                    id: true,
+                                    name: true
+                                }
+                            }
+                        }
+                    },
                     _count: {
                         select: {
                             likes: true,
-                            dislikes: true
+                            dislikes: true,
+                            saves: true
                         }
                     },
                     createdAt: true,
@@ -256,10 +267,21 @@ export async function fetchPublishedPosts ( req, res, next ) {
                             createdAt: true,
                         }
                     },
+                    saves: {
+                        select: {
+                            user: {
+                                select: {
+                                    id: true,
+                                    name: true
+                                }
+                            }
+                        }
+                    },
                     _count: {
                         select: {
                             likes: true,
-                            dislikes: true
+                            dislikes: true,
+                            saves: true
                         }
                     },
                     createdAt: true,
@@ -487,8 +509,8 @@ export async function togglePostLike ( req, res, next ) {
             data: {
                 postId,
                 liked: likedPost.action === 'added like',
-                likeCount: likedPost.counts.likes,
-                dislikeCount: likedPost.counts.dislikes
+                likeCount: likedPost.counts.likes ?? 0,
+                dislikeCount: likedPost.counts.dislikes ?? 0
             }
         } );
 
@@ -621,13 +643,127 @@ export async function togglePostDislike ( req, res, next ) {
             data: {
                 postId,
                 disliked: dislikedPost.action === 'added dislike',
-                likeCount: dislikedPost.counts.likes,
-                dislikeCount: dislikedPost.counts.dislikes
+                likeCount: dislikedPost.counts.likes ?? 0,
+                dislikeCount: dislikedPost.counts.dislikes ?? 0
             }
         } );
 
     } catch ( error ) {
         logger.error( 'Error calling togglePostDislike()...' );
+
+        if ( error.code === 'P2025' ) {
+            return res.status( 404 ).json( {
+                success: false,
+                message: 'Not Found: Post not found',
+            } );
+        }
+
+        return next( error );
+    }
+}
+
+// @desc Save or unsave a post
+// @route POST /api/post/:id/save
+export async function togglePostSave ( req, res, next ) {
+    let message;
+    let savedPost;
+
+    try {
+        logger.debug( 'Called togglePostSave()...' );
+
+        const postId = req.params.id;
+        const post = await prisma.post.findUnique( {
+            where: { id: postId },
+            select: { published: true }
+        } );
+        if ( !post ) {
+            message = `Not Found: Post with id ${ postId } not found`;
+            logger.error( message );
+            return res.status( 404 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        const userId = req.user?.id;
+        if ( !userId ) {
+            message = 'Unauthorized: User must be logged in to save a post';
+            logger.error( message );
+            return res.status( 401 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        if ( !post.published ) {
+            message = 'Forbidden: User can only save a published post';
+            logger.error( message );
+            return res.status( 403 ).json( {
+                success: false,
+                message
+            } );
+        }
+
+        const existingSave = await prisma.postSave.findUnique( {
+            where: {
+                postId_userId: {
+                    postId,
+                    userId
+                }
+            }
+        } );
+
+        try {
+            savedPost = await prisma.$transaction( async ( tx ) => {
+                if ( existingSave ) {
+                    await tx.postSave.delete( {
+                        where: {
+                            postId_userId: {
+                                postId,
+                                userId
+                            }
+                        }
+                    } );
+
+                    return {
+                        action: 'unsaved post',
+                    };
+                } else {
+                    await tx.postSave.create( {
+                        data: {
+                            postId,
+                            userId
+                        }
+                    } );
+
+                    const saves = await tx.postSave.count( {
+                        where: { postId }
+                    } );
+
+                    return {
+                        action: 'saved post',
+                        saves
+                    };
+                }
+            } );
+
+        } catch ( error ) {
+            logger.error( 'Error during post saving:', error );
+            throw error;
+        }
+
+        res.status( 200 ).json( {
+            success: true,
+            message: `User ${ savedPost.action }`,
+            data: {
+                postId,
+                saved: savedPost.action === 'saved post',
+                saveCount: savedPost.saves ?? 0
+            }
+        } );
+
+    } catch ( error ) {
+        logger.error( 'Error calling togglePostSave()...' );
 
         if ( error.code === 'P2025' ) {
             return res.status( 404 ).json( {

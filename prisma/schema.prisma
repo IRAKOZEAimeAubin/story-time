@@ -18,7 +18,7 @@ model User {
   email      String        @unique
   name       String
   posts      Post[]
-  savedPosts Post[]        @relation("SavedPosts")
+  savedPosts PostSave[]
   likes      PostLike[]
   dislikes   PostDislike[]
   auth       Auth?
@@ -46,8 +46,7 @@ model Post {
   author    User          @relation(fields: [authorId], references: [id])
   likes     PostLike[]
   dislikes  PostDislike[]
-  saves     Int           @default(0)
-  savedBy   User[]        @relation("SavedPosts")
+  saves     PostSave[]
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
@@ -76,6 +75,18 @@ model PostDislike {
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+}
+
+model PostSave {
+  id     String @id @default(cuid())
+  postId String
+  post   Post   @relation(fields: [postId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
 
   @@unique([postId, userId])
   @@index([postId])
