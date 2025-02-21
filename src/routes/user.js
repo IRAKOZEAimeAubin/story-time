@@ -1,6 +1,6 @@
 import express from "express";
 import { authenticateUser } from "../middlewares/authenticateUser.js";
-import { fetchUserProfile } from "../controllers/user.js";
+import { fetchDislikedPosts, fetchLikedPosts, fetchSavedPosts, fetchUserProfile } from "../controllers/user.js";
 
 const router = express.Router();
 
@@ -67,5 +67,110 @@ const router = express.Router();
  *         description: Not Found - User not found
  */
 router.get( '/', authenticateUser, fetchUserProfile );
+
+/**
+ * @swagger
+ * /api/user/posts/liked:
+ *   get:
+ *     summary: Fetch posts liked by the authenticated user
+ *     description: Fetch all posts that the authenticated user has liked.
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Liked posts fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Liked posts fetched successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     posts:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Post'
+ *       401:
+ *         description: Unauthorized - User must be logged in
+ */
+router.get( '/posts/liked', authenticateUser, fetchLikedPosts );
+
+/**
+ * @swagger
+ * /api/user/posts/disliked:
+ *   get:
+ *     summary: Fetch posts disliked by the authenticated user
+ *     description: Fetch all posts that the authenticated user has disliked.
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Disliked posts fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Disliked posts fetched successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     posts:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Post'
+ *       401:
+ *         description: Unauthorized - User must be logged in
+ */
+router.get( '/posts/disliked', authenticateUser, fetchDislikedPosts );
+
+/**
+ * @swagger
+ * /api/user/posts/saved:
+ *   get:
+ *     summary: Fetch posts saved by the authenticated user
+ *     description: Fetch all posts that the authenticated user has saved.
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Saved posts fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Saved posts fetched successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     posts:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Post'
+ *       401:
+ *         description: Unauthorized - User must be logged in
+ */
+router.get( '/posts/saved', authenticateUser, fetchSavedPosts );
 
 export default router;
