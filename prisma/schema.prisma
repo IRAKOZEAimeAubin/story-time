@@ -14,16 +14,16 @@ datasource db {
 }
 
 model User {
-  id         String        @id @default(cuid())
-  email      String        @unique
-  name       String
-  posts      Post[]
-  savedPosts PostSave[]
-  likes      PostLike[]
-  dislikes   PostDislike[]
-  auth       Auth?
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  id            String        @id @default(cuid())
+  email         String        @unique
+  name          String
+  posts         Post[]
+  savedPosts    PostSave[]
+  likedPosts    PostLike[]
+  dislikedPosts PostDislike[]
+  auth          Auth?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 }
 
 model Auth {
@@ -31,6 +31,8 @@ model Auth {
   hashedPassword String
   userId         String @unique
   user           User   @relation(fields: [userId], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   @@index([userId])
 }
