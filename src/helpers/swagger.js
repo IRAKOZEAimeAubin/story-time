@@ -17,6 +17,10 @@ const options = {
             {
                 url: 'http://localhost:9003',
                 description: 'Local server'
+            },
+            {
+                url: 'https://story-time-m64f.onrender.com',
+                description:'Remote server'
             }
         ],
         components: {
